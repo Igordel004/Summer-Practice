@@ -6,8 +6,11 @@
 # Build
 target/
 build/
+.gradle/
 *.jar
 *.war
+*.apk
+*.class
 
 # Logs
 *.log
