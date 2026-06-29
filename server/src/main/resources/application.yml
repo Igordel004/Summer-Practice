@@ -3,11 +3,11 @@ server:
 
 spring:
   application:
-    name: gs-message-server
+    name: messenger-server
   datasource:
-    url: jdbc:postgresql://localhost:5432/gs_message_db
-    username: gs_user
-    password: gs_password
+    url: jdbc:postgresql://localhost:5432/messenger_db
+    username: postgres
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -25,7 +25,7 @@ spring:
         format_sql: true
   liquibase:
     enabled: true
-    change-log: classpath:/db/migration/Init_schema.sql
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
 
 jwt:
   secret: ${JWT_SECRET:my-very-secret-key-for-jwt-signing-hmac-sha-256}
@@ -35,8 +35,13 @@ websocket:
   port: 8081
   max-connections: 500
 
+sms:
+  api-id: 4A718BBE-CAC4-61CE-CF82-360BF058950E
+  api-url: https://sms.ru/sms/send
+  sender: SMS
+
 soap:
-  namespace: http://ritg.ru/gsmessage
+  namespace: http://ritg.ru/messengerserver
   level:
-    ru.ritg.gsmessage: DEBUG
+    ru.ritg.messengerserver: DEBUG
     org.springframework.ws: DEBUG

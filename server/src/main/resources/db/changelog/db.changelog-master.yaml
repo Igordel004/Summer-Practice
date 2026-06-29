@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-initial-schema
+      author: developer
+      changes:
+        - sqlFile:
+            path: db/migration/Init_schema.sql
+            encoding: UTF-8
+  - changeSet:
+      id: 2-seed-test-user
+      author: developer
+      changes:
+        - sqlFile:
+            path: db/migration/Seed_test_user.sql
+            encoding: UTF-8

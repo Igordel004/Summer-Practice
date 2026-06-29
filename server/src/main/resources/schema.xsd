@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:msg="http://ritg.ru/messengerserver"
+           targetNamespace="http://ritg.ru/messengerserver"
+           elementFormDefault="qualified">
+
+    <!-- Request: RequestOtp -->
+    <xs:element name="RequestOtp" type="msg:RequestOtpType"/>
+
+    <xs:complexType name="RequestOtpType">
+        <xs:sequence>
+            <xs:element name="phone" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: ResponseOtp -->
+    <xs:element name="ResponseOtp" type="msg:ResponseOtpType"/>
+
+    <xs:complexType name="ResponseOtpType">
+        <xs:sequence>
+            <xs:element name="success" type="xs:boolean"/>
+            <xs:element name="messageId" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: VerifyOtp -->
+    <xs:element name="VerifyOtp" type="msg:VerifyOtpType"/>
+
+    <xs:complexType name="VerifyOtpType">
+        <xs:sequence>
+            <xs:element name="phone" type="xs:string"/>
+            <xs:element name="code" type="xs:string"/>
+            <xs:element name="nickname" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: AuthResponse -->
+    <xs:element name="AuthResponse" type="msg:AuthResponseType"/>
+
+    <xs:complexType name="AuthResponseType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+            <xs:element name="expiresAt" type="xs:dateTime"/>
+            <xs:element name="nickname" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: AddContact -->
+    <xs:element name="AddContact" type="msg:AddContactType"/>
+
+    <xs:complexType name="AddContactType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+            <xs:element name="contactPhone" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: ContactResponse -->
+    <xs:element name="ContactResponse" type="msg:ContactResponseType"/>
+
+    <xs:complexType name="ContactResponseType">
+        <xs:sequence>
+            <xs:element name="success" type="xs:boolean"/>
+            <xs:element name="contactId" type="xs:string" minOccurs="0"/>
+            <xs:element name="message" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: GetHistory -->
+    <xs:element name="GetHistory" type="msg:GetHistoryType"/>
+
+    <xs:complexType name="GetHistoryType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+            <xs:element name="offset" type="xs:int"/>
+            <xs:element name="limit" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: HistoryResponse -->
+    <xs:element name="HistoryResponse" type="msg:HistoryResponseType"/>
+
+    <xs:complexType name="HistoryResponseType">
+        <xs:sequence>
+            <xs:element name="messages" type="msg:MessageDtoType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="total" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MessageDtoType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string"/>
+            <xs:element name="senderId" type="xs:string"/>
+            <xs:element name="recipientId" type="xs:string"/>
+            <xs:element name="payload" type="xs:string"/>
+            <xs:element name="status" type="msg:MessageStatusType"/>
+            <xs:element name="createdAt" type="xs:dateTime" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="MessageStatusType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PENDING"/>
+            <xs:enumeration value="DELIVERED"/>
+            <xs:enumeration value="READ"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Request: UpdateNickname -->
+    <xs:element name="UpdateNickname" type="msg:UpdateNicknameType"/>
+
+    <xs:complexType name="UpdateNicknameType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+            <xs:element name="nickname" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: UpdateNicknameResponse -->
+    <xs:element name="UpdateNicknameResponse" type="msg:UpdateNicknameResponseType"/>
+
+    <xs:complexType name="UpdateNicknameResponseType">
+        <xs:sequence>
+            <xs:element name="success" type="xs:boolean"/>
+            <xs:element name="nickname" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: GetContacts -->
+    <xs:element name="GetContacts" type="msg:GetContactsType"/>
+
+    <xs:complexType name="GetContactsType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: GetContactsResponse -->
+    <xs:element name="GetContactsResponse" type="msg:GetContactsResponseType"/>
+
+    <xs:complexType name="GetContactsResponseType">
+        <xs:sequence>
+            <xs:element name="contacts" type="msg:ContactDtoType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ContactDtoType">
+        <xs:sequence>
+            <xs:element name="contactId" type="xs:string"/>
+            <xs:element name="phone" type="xs:string"/>
+            <xs:element name="nickname" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: DeleteContact -->
+    <xs:element name="DeleteContact" type="msg:DeleteContactType"/>
+
+    <xs:complexType name="DeleteContactType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+            <xs:element name="contactPhone" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: GetChats -->
+    <xs:element name="GetChats" type="msg:GetChatsType"/>
+
+    <xs:complexType name="GetChatsType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Response: GetChatsResponse -->
+    <xs:element name="GetChatsResponse" type="msg:GetChatsResponseType"/>
+
+    <xs:complexType name="GetChatsResponseType">
+        <xs:sequence>
+            <xs:element name="contacts" type="msg:ContactDtoType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Request: EditContact -->
+    <xs:element name="EditContact" type="msg:EditContactType"/>
+
+    <xs:complexType name="EditContactType">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string"/>
+            <xs:element name="contactPhone" type="xs:string"/>
+            <xs:element name="newNickname" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

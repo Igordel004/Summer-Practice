@@ -18,3 +18,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Config
+client/app/src/main/assets/server_config.properties
+client/app/src/main/res/xml
