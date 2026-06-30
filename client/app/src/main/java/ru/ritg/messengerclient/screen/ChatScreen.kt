@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,17 +90,20 @@ fun ChatScreen(
     val contactNickname = contact?.nickname ?: ""
 
     val connected by chatViewModel.connected.collectAsState()
+    val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
+    val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
 
     LaunchedEffect(state.token, recipientPhone) {
         if (state.token.isNotEmpty()) {
             chatViewModel.setRecipient(recipientPhone)
+            chatViewModel.clearMessages()
             chatsViewModel.addOrUpdateConversation(
                 phone = recipientPhone,
                 nickname = contactNickname
             )
             val recipientUserId = contact?.userId
             if (recipientUserId != null) {
-                chatViewModel.loadHistory(state, recipientUserId, 0, 100) { history ->
+                chatViewModel.loadHistory(state, recipientUserId, 0, 20) { history ->
                     chatViewModel.setMessages(history)
                     chatViewModel.markIncomingAsRead()
                 }
@@ -113,9 +117,25 @@ fun ChatScreen(
         }
     }
 
+    var initialScrollComplete by remember { mutableStateOf(false) }
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
+            initialScrollComplete = true
+        }
+    }
+
+    LaunchedEffect(listState, initialScrollComplete) {
+        if (!initialScrollComplete) return@LaunchedEffect
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val firstVisibleItemIndex = layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: 0
+            Triple(layoutInfo.totalItemsCount, firstVisibleItemIndex, hasMoreMessages)
+        }.collect { (totalItemCount, firstVisibleItemIndex, hasMore) ->
+            if (hasMore && totalItemCount > 0 && firstVisibleItemIndex <= 2 && !isLoadingMore) {
+                chatViewModel.loadMoreMessages(state)
+            }
         }
     }
 

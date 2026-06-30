@@ -39,10 +39,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
+
+    private val _hasMoreMessages = MutableStateFlow(true)
+    val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages.asStateFlow()
+
     private var myUserId: UUID? = null
     private var recipientPhone: String = ""
     private var lastAppState: AppState? = null
     private var pendingMessage: Triple<UUID, UUID, String>? = null
+    private var currentContactId: UUID? = null
+    private var totalMessages: Int = 0
+    private var loadedCount: Int = 0
+    private val PAGE_SIZE = 20
 
     // Pending acks keyed by payload, to handle race condition where ack arrives before local message is added
     private val pendingAcks = ConcurrentHashMap<String, PendingAck>()
@@ -303,7 +313,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Загрузить историю переписки с сервера.
+     * Загрузить историю переписки с сервера (последние 20 сообщений).
      *
      * @param appState состояние приложения
      * @param recipientId UUID собеседника
@@ -312,13 +322,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
      * @param onComplete callback со списком сообщений
      */
     fun loadHistory(appState: AppState, recipientId: java.util.UUID, offset: Int, limit: Int, onComplete: (List<ChatMessage>) -> Unit) {
+        currentContactId = recipientId
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 soapClient.configure(appState.serverHost, appState.serverPort)
                 soapClient.getHistory(appState.token, recipientId, offset, limit)
             }
             result.onSuccess { xml ->
-                val history = parseHistory(xml, appState)
+                val (history, total) = parseHistoryWithTotal(xml, appState)
+                totalMessages = total
+                loadedCount = history.size
+                _hasMoreMessages.value = loadedCount < totalMessages
                 onComplete(history)
             }
             result.onFailure { e ->
@@ -326,6 +340,39 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 onComplete(emptyList())
             }
         }
+    }
+
+    /**
+     * Загрузить следующую порцию сообщений (при прокрутке вверх).
+     */
+    fun loadMoreMessages(appState: AppState) {
+        if (_isLoadingMore.value || !_hasMoreMessages.value) return
+        _isLoadingMore.value = true
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                soapClient.configure(appState.serverHost, appState.serverPort)
+                soapClient.getHistory(appState.token, currentContactId!!, loadedCount, PAGE_SIZE)
+            }
+            result.onSuccess { xml ->
+                val (pagedMessages, total) = parseHistoryWithTotal(xml, appState)
+                totalMessages = total
+                loadedCount += pagedMessages.size
+                _hasMoreMessages.value = loadedCount < totalMessages
+                _messages.value = pagedMessages + _messages.value
+                _isLoadingMore.value = false
+            }
+            result.onFailure { e ->
+                _isLoadingMore.value = false
+            }
+        }
+    }
+
+    private fun parseHistoryWithTotal(xml: String, appState: AppState): Pair<List<ChatMessage>, Int> {
+        val messages = parseHistory(xml, appState)
+        val totalPattern = "<[^>]*total>([^<]*)</[^>]*total>".toRegex()
+        val totalMatch = totalPattern.find(xml)
+        val total = totalMatch?.groupValues?.get(1)?.trim()?.toIntOrNull() ?: messages.size
+        return Pair(messages, total)
     }
 
     private fun parseHistory(xml: String, appState: AppState): List<ChatMessage> {
@@ -452,14 +499,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _messages.value = messages
     }
 
+    /** Очистить список сообщений. */
+    fun clearMessages() {
+        _messages.value = emptyList()
+    }
+
     /** Полностью очистить состояние ViewModel и закрыть соединение. */
     fun clear() {
         _messages.value = emptyList()
         _connected.value = false
         _statusMessage.value = null
+        _isLoadingMore.value = false
+        _hasMoreMessages.value = true
         myUserId = null
         recipientPhone = ""
         lastAppState = null
+        currentContactId = null
+        totalMessages = 0
+        loadedCount = 0
         pendingMessage = null
         pendingAcks.clear()
         wsClient.disconnect()

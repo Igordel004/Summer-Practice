@@ -35,13 +35,13 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     @Query("SELECT m FROM Message m WHERE " +
             "(m.sender = :user1 AND m.recipient = :user2) OR " +
             "(m.sender = :user2 AND m.recipient = :user1) " +
-            "ORDER BY m.createdAt ASC")
+            "ORDER BY m.createdAt DESC")
     List<Message> findConversation(@Param("user1") User user1, @Param("user2") User user2);
 
     @Query("SELECT m FROM Message m WHERE " +
             "(m.sender = :user1 AND m.recipient = :user2) OR " +
             "(m.sender = :user2 AND m.recipient = :user1) " +
-            "ORDER BY m.createdAt ASC")
+            "ORDER BY m.createdAt DESC")
     List<Message> findConversationPaginated(@Param("user1") User user1, @Param("user2") User user2,
                                             org.springframework.data.domain.Pageable pageable);
 
@@ -50,4 +50,9 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
 
     @Query("SELECT DISTINCT m.sender FROM Message m WHERE m.recipient = :user")
     List<User> findSendersByRecipient(@Param("user") User user);
+
+    @Query("SELECT COUNT(m) FROM Message m WHERE " +
+            "(m.sender = :user1 AND m.recipient = :user2) OR " +
+            "(m.sender = :user2 AND m.recipient = :user1)")
+    long countConversation(@Param("user1") User user1, @Param("user2") User user2);
 }

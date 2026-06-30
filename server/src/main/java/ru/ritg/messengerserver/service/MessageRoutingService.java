@@ -13,6 +13,7 @@ import ru.ritg.messengerserver.repository.MessageRepository;
 import ru.ritg.messengerserver.repository.UserRepository;
 
 import org.springframework.data.domain.PageRequest;
+import java.util.Collections;
 
 import java.util.List;
 import java.util.UUID;
@@ -155,8 +156,27 @@ public class MessageRoutingService {
                 .orElseThrow(() -> new MessageNotFoundException(null));
         User contact = userRepository.findById(contactId)
                 .orElseThrow(() -> new MessageNotFoundException(null));
-        return messageRepository.findConversationPaginated(user, contact,
+        List<Message> result = messageRepository.findConversationPaginated(user, contact,
                 PageRequest.of(offset / Math.max(limit, 1), Math.max(limit, 1)));
+        Collections.reverse(result);
+        return result;
+    }
+
+    /**
+     * Подсчитать общее количество сообщений в диалоге.
+     *
+     * @param userId    UUID пользователя
+     * @param contactId UUID собеседника
+     * @return общее число сообщений
+     */
+    @Transactional(readOnly = true)
+    public long countHistory(UUID userId, UUID contactId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MessageNotFoundException(null));
+        User contact = userRepository.findById(contactId)
+                .orElseThrow(() -> new MessageNotFoundException(null));
+        long count = messageRepository.countConversation(user, contact);
+        return count;
     }
 
     /**

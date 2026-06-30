@@ -264,7 +264,10 @@ public class SoapEndpoint {
 
             HistoryResponse response = new HistoryResponse();
             response.setMessages(dtos);
-            response.setTotal(dtos.size());
+            long totalCount = messageRoutingService.countHistory(
+                    currentUser.get().getId(), request.getContactId());
+            response.setTotal((int) totalCount);
+            log.info("GetHistory: {}-{} of {}", request.getOffset(), request.getOffset() + dtos.size(), totalCount);
             return response;
         } catch (LimitExceededException | UnauthorizedException ex) {
             throw soapFaultResolver.resolveException(ex);
