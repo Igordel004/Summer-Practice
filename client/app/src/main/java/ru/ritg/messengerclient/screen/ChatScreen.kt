@@ -58,12 +58,16 @@ import java.util.UUID
  *
  * Загружает историю переписки, отображает список сообщений,
  * позволяет отправлять, редактировать и удалять сообщения через WebSocket.
+ * Автоматически помечает входящие сообщения как прочитанные (READ)
+ * при открытии чата и при получении каждого нового сообщения.
  *
  * @param chatViewModel ViewModel чата
  * @param authViewModel ViewModel авторизации
  * @param chatsViewModel ViewModel списка чатов
  * @param contactsViewModel ViewModel контактов
  * @param recipientPhone номер телефона собеседника
+ * @param partnerId UUID собеседника (из {@code GetChats} или {@code FindUserByPhone}).
+ *                   Пустая строка, если собеседник не найден (чат недоступен).
  * @param onBack возврат на предыдущий экран
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -74,6 +78,7 @@ fun ChatScreen(
     chatsViewModel: ChatsViewModel,
     contactsViewModel: ContactsViewModel,
     recipientPhone: String,
+    partnerId: String,
     onBack: () -> Unit
 ) {
     val state by authViewModel.state.collectAsState()
@@ -101,9 +106,10 @@ fun ChatScreen(
                 phone = recipientPhone,
                 nickname = contactNickname
             )
-            val recipientUserId = contact?.userId
+            val recipientUserId = partnerId.ifEmpty { contact?.userId?.toString() }
             if (recipientUserId != null) {
-                chatViewModel.loadHistory(state, recipientUserId, 0, 20) { history ->
+                val recipientUuid = java.util.UUID.fromString(recipientUserId)
+                chatViewModel.loadHistory(state, recipientUuid, 0, 20) { history ->
                     chatViewModel.setMessages(history)
                     chatViewModel.markIncomingAsRead()
                 }
@@ -115,6 +121,10 @@ fun ChatScreen(
         if (connected) {
             chatViewModel.markIncomingAsRead()
         }
+    }
+
+    LaunchedEffect(messages) {
+        chatViewModel.markIncomingAsRead()
     }
 
     var initialScrollComplete by remember { mutableStateOf(false) }
@@ -223,8 +233,9 @@ fun ChatScreen(
                     onClick = {
                         if (inputText.isNotBlank()) {
                             val senderId = state.userId
-                            val recipientId = contact?.userId
-                            if (recipientId == null || senderId == null) return@IconButton
+                            val recipientIdStr = partnerId.ifEmpty { contact?.userId?.toString() }
+                            if (recipientIdStr == null || senderId == null) return@IconButton
+                            val recipientId = java.util.UUID.fromString(recipientIdStr)
 
                             val editing = editingMessage
                             if (editing != null && editing.id != null) {

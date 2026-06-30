@@ -60,7 +60,7 @@ import ru.ritg.messengerclient.viewmodel.ChatsViewModel
 fun ChatsScreen(
     chatsViewModel: ChatsViewModel,
     contacts: List<Contact>,
-    onOpenChat: (String) -> Unit,
+    onOpenChat: (String, String) -> Unit,
     onSendMessage: (phone: String, message: String, nickname: String) -> Unit
 ) {
     val conversations by chatsViewModel.conversations.collectAsState()
@@ -107,7 +107,7 @@ fun ChatsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .clickable { onOpenChat(convo.phone) }
+                            .clickable { onOpenChat(convo.phone, convo.partnerId) }
                     ) {
                         Row(
                             modifier = Modifier

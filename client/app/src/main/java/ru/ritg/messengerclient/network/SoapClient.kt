@@ -102,13 +102,13 @@ class SoapClient(private var host: String = "10.0.2.2", private var port: Int = 
      * Получить историю переписки с пагинацией.
      *
      * @param token JWT-токен
-     * @param contactId UUID собеседника
+     * @param partnerId UUID собеседника
      * @param offset смещение
      * @param limit максимальное количество сообщений
      * @return XML-ответ с HistoryResponse
      */
-    fun getHistory(token: String, contactId: java.util.UUID, offset: Int, limit: Int): Result<String> {
-        val xml = envelope("<msg:GetHistory><msg:token>$token</msg:token><msg:contactId>$contactId</msg:contactId><msg:offset>$offset</msg:offset><msg:limit>$limit</msg:limit></msg:GetHistory>")
+    fun getHistory(token: String, partnerId: java.util.UUID, offset: Int, limit: Int): Result<String> {
+        val xml = envelope("<msg:GetHistory><msg:token>$token</msg:token><msg:partnerId>$partnerId</msg:partnerId><msg:offset>$offset</msg:offset><msg:limit>$limit</msg:limit></msg:GetHistory>")
         return postSoap(xml, "GetHistory")
     }
 
@@ -121,6 +121,22 @@ class SoapClient(private var host: String = "10.0.2.2", private var port: Int = 
     fun getContacts(token: String): Result<String> {
         val xml = envelope("<msg:GetContacts><msg:token>$token</msg:token></msg:GetContacts>")
         return postSoap(xml, "GetContacts")
+    }
+
+    /**
+     * Найти пользователя по номеру телефона (SOAP).
+     *
+     * Используется для получения UUID собеседника, которого нет в контактах.
+     * Позволяет открыть чат с пользователем, даже если он не добавлен в контакты
+     * и не было общей переписки.
+     *
+     * @param token JWT-токен
+     * @param phone номер телефона в формате E.164 (например, +79001234567)
+     * @return XML-ответ с FindUserByPhoneResponse
+     */
+    fun findUserByPhone(token: String, phone: String): Result<String> {
+        val xml = envelope("<msg:FindUserByPhone><msg:token>$token</msg:token><msg:phone>$phone</msg:phone></msg:FindUserByPhone>")
+        return postSoap(xml, "FindUserByPhone")
     }
 
     /**

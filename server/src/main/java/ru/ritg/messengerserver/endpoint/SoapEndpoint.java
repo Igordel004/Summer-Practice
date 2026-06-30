@@ -246,7 +246,7 @@ public class SoapEndpoint {
             }
 
             var messages = messageRoutingService.getHistory(
-                    currentUser.get().getId(), request.getContactId(),
+                    currentUser.get().getId(), request.getPartnerId(),
                     request.getOffset(), request.getLimit());
 
             List<MessageDto> dtos = messages.stream().map(msg -> {
@@ -265,7 +265,7 @@ public class SoapEndpoint {
             HistoryResponse response = new HistoryResponse();
             response.setMessages(dtos);
             long totalCount = messageRoutingService.countHistory(
-                    currentUser.get().getId(), request.getContactId());
+                    currentUser.get().getId(), request.getPartnerId());
             response.setTotal((int) totalCount);
             log.info("GetHistory: {}-{} of {}", request.getOffset(), request.getOffset() + dtos.size(), totalCount);
             return response;
@@ -378,6 +378,46 @@ public class SoapEndpoint {
             response.setContacts(dtos);
             return response;
         } catch (LimitExceededException | UnauthorizedException ex) {
+            throw soapFaultResolver.resolveException(ex);
+        }
+    }
+
+    /**
+     * Поиск пользователя по номеру телефона.
+     *
+     * <p>Входные данные: SOAP {@link FindUserByPhone} с JWT-токеном и номером телефона.</p>
+     * <p>Параметры: {@code token} — JWT, {@code phone} — номер в формате E.164 ({@code +79001234567}).</p>
+     * <p>Ожидаемый результат: {@link FindUserByPhoneResponse} с флагом {@code found},
+     * UUID пользователя, телефоном и никнеймом (если найден).</p>
+     * <p>Используется клиентом для получения UUID собеседника, который не добавлен в контакты
+     * и с которым ещё не было переписки.</p>
+     * <p>Возможные ошибки: {@code UnauthorizedException}.</p>
+     *
+     * @param request SOAP-запрос с токеном и номером телефона
+     * @return ответ с результатом поиска
+     */
+    @PayloadRoot(namespace = NAMESPACE, localPart = "FindUserByPhone")
+    @ResponsePayload
+    public FindUserByPhoneResponse findUserByPhone(@RequestPayload FindUserByPhone request) {
+        try {
+            checkConnectionLimit();
+            Optional<User> currentUser = authService.getUserByToken(request.getToken());
+            if (currentUser.isEmpty()) {
+                throw new UnauthorizedException(request.getToken());
+            }
+
+            FindUserByPhoneResponse response = new FindUserByPhoneResponse();
+            Optional<User> found = userRepository.findByPhone(request.getPhone());
+            if (found.isPresent()) {
+                response.setFound(true);
+                response.setUserId(found.get().getId());
+                response.setPhone(found.get().getPhone());
+                response.setNickname(found.get().getNickname());
+            } else {
+                response.setFound(false);
+            }
+            return response;
+        } catch (UnauthorizedException ex) {
             throw soapFaultResolver.resolveException(ex);
         }
     }

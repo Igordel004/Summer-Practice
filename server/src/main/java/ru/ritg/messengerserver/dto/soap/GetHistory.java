@@ -11,9 +11,14 @@ import java.util.UUID;
 /**
  * DTO: запрос истории переписки (SOAP).
  *
- * <p>Входные данные: JWT-токен, смещение и лимит пагинации.</p>
- * <p>Ожидаемый результат: {@link HistoryResponse} — список сообщений и общее количество.</p>
- * <p>Возможные ошибки: {@code UnauthorizedException}, {@code InvalidOffsetException}.</p>
+ * <p>Входные данные: JWT-токен, UUID собеседника ({@code partnerId}),
+ * смещение и лимит пагинации.</p>
+ * <p>Ожидаемый результат: {@link HistoryResponse} — список сообщений и общее количество.
+ * Сообщения возвращаются в хронологическом порядке (от старых к новым).</p>
+ * <p>Возможные ошибки: {@code UnauthorizedException}, {@code MessageNotFoundException}.</p>
+ *
+ * <p>Параметр {@code partnerId} — UUID другого участника переписки.
+ * Серверу неважно, добавлен ли он в контакты — достаточно наличия переписки в БД.</p>
  */
 @XmlRootElement(name = "GetHistory", namespace = SoapConstants.NAMESPACE)
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -24,7 +29,7 @@ public class GetHistory {
     private String token;
 
     @XmlElement(namespace = SoapConstants.NAMESPACE, required = true)
-    private UUID contactId;
+    private UUID partnerId;
 
     @XmlElement(namespace = SoapConstants.NAMESPACE, required = true)
     private int offset;

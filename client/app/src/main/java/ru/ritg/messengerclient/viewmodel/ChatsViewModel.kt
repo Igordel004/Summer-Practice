@@ -15,12 +15,14 @@ import ru.ritg.messengerclient.network.SoapClient
 /**
  * Модель отображения чата в списке.
  *
+ * @property partnerId UUID собеседника (получен из {@code GetChats} или {@code FindUserByPhone})
  * @property phone номер телефона собеседника
  * @property nickname никнейм собеседника
  * @property lastMessage текст последнего сообщения
  * @property timestamp время последнего сообщения
  */
 data class ChatConversation(
+    val partnerId: String = "",
     val phone: String,
     val nickname: String = "",
     val lastMessage: String = "",
@@ -88,6 +90,7 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
             if (phone.isNotBlank()) {
                 contacts.add(
                     ChatConversation(
+                        partnerId = contactIds[i],
                         phone = phone,
                         nickname = nicknames.getOrElse(i) { "" }
                     )

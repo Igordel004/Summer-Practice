@@ -126,6 +126,25 @@ public class MessageRoutingService {
     }
 
     /**
+     * Получить сообщения отправителя с изменённым статусом (DELIVERED / READ).
+     *
+     * <p>Используется при подключении пользователя через WebSocket для отправки
+     * уведомлений ({@code status_ack}) отправителю о статусе его сообщений,
+     * которые были доставлены или прочитаны пока он был офлайн.</p>
+     *
+     * @param userId UUID отправителя
+     * @return список сообщений (не более 100 последних) со статусами DELIVERED или READ
+     */
+    @Transactional(readOnly = true)
+    public List<Message> getStatusUpdatesForUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MessageNotFoundException(null));
+        return messageRepository.findBySenderAndStatusIn(user,
+                java.util.List.of(MessageStatus.DELIVERED, MessageStatus.READ),
+                org.springframework.data.domain.PageRequest.of(0, 100));
+    }
+
+    /**
      * Получить список пользователей, с которыми есть переписка.
      *
      * @param userId идентификатор пользователя
@@ -145,16 +164,16 @@ public class MessageRoutingService {
      * Получить историю переписки с пагинацией.
      *
      * @param userId    идентификатор пользователя
-     * @param contactId идентификатор собеседника
+     * @param partnerId идентификатор собеседника
      * @param offset    смещение
      * @param limit     максимальное количество записей
      * @return список сообщений
      */
     @Transactional(readOnly = true)
-    public List<Message> getHistory(UUID userId, UUID contactId, int offset, int limit) {
+    public List<Message> getHistory(UUID userId, UUID partnerId, int offset, int limit) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MessageNotFoundException(null));
-        User contact = userRepository.findById(contactId)
+        User contact = userRepository.findById(partnerId)
                 .orElseThrow(() -> new MessageNotFoundException(null));
         List<Message> result = messageRepository.findConversationPaginated(user, contact,
                 PageRequest.of(offset / Math.max(limit, 1), Math.max(limit, 1)));
@@ -166,14 +185,14 @@ public class MessageRoutingService {
      * Подсчитать общее количество сообщений в диалоге.
      *
      * @param userId    UUID пользователя
-     * @param contactId UUID собеседника
+     * @param partnerId UUID собеседника
      * @return общее число сообщений
      */
     @Transactional(readOnly = true)
-    public long countHistory(UUID userId, UUID contactId) {
+    public long countHistory(UUID userId, UUID partnerId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MessageNotFoundException(null));
-        User contact = userRepository.findById(contactId)
+        User contact = userRepository.findById(partnerId)
                 .orElseThrow(() -> new MessageNotFoundException(null));
         long count = messageRepository.countConversation(user, contact);
         return count;

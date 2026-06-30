@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +42,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ru.ritg.messengerclient.screen.ChatScreen
 import ru.ritg.messengerclient.screen.ChatsScreen
 import ru.ritg.messengerclient.screen.ContactsScreen
@@ -126,8 +130,10 @@ fun AppNavigation() {
                     contactsViewModel = contactsViewModel,
                     chatsViewModel = chatsViewModel,
                     chatViewModel = chatViewModel,
-                    onOpenChat = { phone ->
-                        navController.navigate("chat/$phone")
+                    onOpenChat = { phone, partnerId ->
+                        if (partnerId.isNotEmpty()) {
+                            navController.navigate("chat/$phone/$partnerId")
+                        }
                     },
                     onNavigateToServerConfig = {
                         navController.navigate("server_config")
@@ -144,16 +150,21 @@ fun AppNavigation() {
                 )
             }
             composable(
-                "chat/{recipientPhone}",
-                arguments = listOf(navArgument("recipientPhone") { type = NavType.StringType })
+                "chat/{recipientPhone}/{partnerId}",
+                arguments = listOf(
+                    navArgument("recipientPhone") { type = NavType.StringType },
+                    navArgument("partnerId") { type = NavType.StringType }
+                )
             ) { backStackEntry ->
                 val recipientPhone = backStackEntry.arguments?.getString("recipientPhone") ?: ""
+                val partnerId = backStackEntry.arguments?.getString("partnerId") ?: ""
                 ChatScreen(
                     chatViewModel = chatViewModel,
                     authViewModel = authViewModel,
                     chatsViewModel = chatsViewModel,
                     contactsViewModel = contactsViewModel,
                     recipientPhone = recipientPhone,
+                    partnerId = partnerId,
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -181,13 +192,16 @@ private fun MainScreen(
     contactsViewModel: ContactsViewModel,
     chatsViewModel: ChatsViewModel,
     chatViewModel: ChatViewModel,
-    onOpenChat: (String) -> Unit,
+    onOpenChat: (String, String) -> Unit,
     onNavigateToServerConfig: () -> Unit,
     onLogout: () -> Unit
 ) {
     val state by authViewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Чаты", "Контакты")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val soapClient = remember { ru.ritg.messengerclient.network.SoapClient() }
 
     val chatsUnauthorized by chatsViewModel.unauthorized.collectAsState()
     val contactsUnauthorized by contactsViewModel.unauthorized.collectAsState()
@@ -267,20 +281,59 @@ private fun MainScreen(
                         contacts = contacts,
                         onOpenChat = onOpenChat,
                         onSendMessage = { phone, message, nickname ->
-                            val contact = contacts.find { it.phone == phone }
-                            val recipientId = contact?.userId
-                            val senderId = state.userId
-                            if (recipientId != null && senderId != null) {
-                                chatViewModel.setPendingMessage(senderId, recipientId, message)
+                            if (chatsViewModel.conversations.value.any { it.phone == phone }) {
+                                android.widget.Toast.makeText(context, "Чат уже существует", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                val contact = contacts.find { it.phone == phone }
+                                val senderId = state.userId
+                                if (contact != null) {
+                                    val recipientId = contact.userId
+                                    if (recipientId != null && senderId != null) {
+                                        coroutineScope.launch {
+                                            chatViewModel.sendMessage(senderId, recipientId, message)
+                                        }
+                                    }
+                                    val time = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                                    chatsViewModel.addOrUpdateConversation(
+                                        phone = phone,
+                                        nickname = nickname,
+                                        lastMessage = message,
+                                        timestamp = time
+                                    )
+                                    android.widget.Toast.makeText(context, "Сообщение отправлено", android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    coroutineScope.launch {
+                                        val result = withContext(Dispatchers.IO) {
+                                            soapClient.configure(state.serverHost, state.serverPort)
+                                            soapClient.findUserByPhone(state.token, phone)
+                                        }
+                                        result.onSuccess { xml ->
+                                            val found = soapClient.extractTag(xml, "found")
+                                            if (found == "true") {
+                                                val userId = soapClient.extractTag(xml, "userId")
+                                                val userNickname = soapClient.extractTag(xml, "nickname")
+                                                if (senderId != null) {
+                                                    val recipientUuid = java.util.UUID.fromString(userId)
+                                                    chatViewModel.sendMessage(senderId, recipientUuid, message)
+                                                    val time = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                                                    chatsViewModel.addOrUpdateConversation(
+                                                        phone = phone,
+                                                        nickname = userNickname,
+                                                        lastMessage = message,
+                                                        timestamp = time
+                                                    )
+                                                    android.widget.Toast.makeText(context, "Сообщение отправлено", android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                android.widget.Toast.makeText(context, "Пользователь не найден", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        result.onFailure {
+                                            android.widget.Toast.makeText(context, "Ошибка поиска: ${it.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
-                            val time = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-                            chatsViewModel.addOrUpdateConversation(
-                                phone = phone,
-                                nickname = nickname,
-                                lastMessage = message,
-                                timestamp = time
-                            )
-                            onOpenChat(phone)
                         }
                     )
                 }

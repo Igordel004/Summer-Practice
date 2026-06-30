@@ -46,9 +46,7 @@ public class SmsGatewayService {
     public boolean sendSms(String phone, String code) {
         String cleanPhone = phone.replace("+", "");
         log.info("SMS code for {}: {}", cleanPhone, code);
-        return true;
 
-/*
         String message = String.format(SMS_TEMPLATE, code);
 
         String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
@@ -86,6 +84,6 @@ public class SmsGatewayService {
             log.error("Failed to send SMS to {}: {}", cleanPhone, e.getMessage());
             return false;
         }
-*/
+
     }
 }

@@ -66,7 +66,14 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
      *
      * <p>Входные данные: WebSocket handshake с JWT в query-параметре.</p>
      * <p>Параметры: {@code token} (String) — обязательный JWT.</p>
-     * <p>Ожидаемый результат: сессия зарегистрирована в {@link SessionRegistry}.</p>
+     * <p>Ожидаемый результат:</p>
+     * <ul>
+     *   <li>Сессия зарегистрирована в {@link SessionRegistry}</li>
+     *   <li>PENDING-сообщения доставлены получателю, статус обновлён на DELIVERED</li>
+     *   <li>Отправителям доставленных сообщений отправлен {@code status_ack} (если онлайн)</li>
+     *   <li>Отправителю отправлены {@code status_ack} для сообщений со статусом DELIVERED/READ,
+     *       которые изменились пока он был офлайн (не более 100 последних)</li>
+     * </ul>
      * <p>Возможные ошибки: 401 Policy Violation (невалидный токен), 503 (лимит 500).</p>
      *
      * @param session WebSocket-сессия
@@ -77,7 +84,7 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         if (userId == null) {
             log.warn("No userId in session attributes, closing connection");
             try {
-                session.close(new CloseStatus(4001, "Missing user ID"));
+                session.close(new CloseStatus(401, "Missing user ID"));
             } catch (IOException e) {
                 log.error("Error closing session", e);
             }
@@ -103,9 +110,35 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
 
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(delivery)));
                 messageRoutingService.updateStatus(msg.getId(), MessageStatus.DELIVERED);
+
+                String senderId = msg.getSender().getId().toString();
+                if (sessionRegistry.isOnline(senderId)) {
+                    var senderSession = sessionRegistry.getSession(senderId);
+                    if (senderSession.isPresent() && senderSession.get().isOpen()) {
+                        WsStatusUpdate notify = new WsStatusUpdate();
+                        notify.setType("status_ack");
+                        notify.setMessageId(msg.getId());
+                        notify.setStatus(MessageStatus.DELIVERED);
+                        notify.setTimestamp(LocalDateTime.now().format(TS_FORMAT));
+                        senderSession.get().sendMessage(
+                                new TextMessage(objectMapper.writeValueAsString(notify)));
+                    }
+                }
             }
             if (!buffered.isEmpty()) {
                 log.info("Delivered {} buffered messages to user {}", buffered.size(), userId);
+            }
+
+            var statusUpdates = messageRoutingService.getStatusUpdatesForUser(UUID.fromString(userId));
+            for (Message msg : statusUpdates) {
+                WsStatusUpdate notify = new WsStatusUpdate();
+                notify.setType("status_ack");
+                notify.setMessageId(msg.getId());
+                notify.setStatus(msg.getStatus());
+                notify.setTimestamp(msg.getCreatedAt() != null
+                        ? msg.getCreatedAt().format(TS_FORMAT)
+                        : LocalDateTime.now().format(TS_FORMAT));
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(notify)));
             }
         } catch (IOException e) {
             log.error("Error delivering buffered messages", e);
