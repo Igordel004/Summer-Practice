@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -45,7 +43,6 @@ import ru.ritg.messengerclient.viewmodel.AuthViewModel
  * Переключается между режимами «Вход» и «Регистрация».
  *
  * @param viewModel ViewModel авторизации
- * @param onNavigateToServerConfig переход к настройкам сервера
  * @param onNavigateToOtp переход к экрану верификации
  * @param onNavigateToContacts переход к списку контактов (при уже авторизованном токене)
  */
@@ -53,7 +50,6 @@ import ru.ritg.messengerclient.viewmodel.AuthViewModel
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel,
-    onNavigateToServerConfig: () -> Unit,
     onNavigateToOtp: () -> Unit,
     onNavigateToContacts: () -> Unit
 ) {
@@ -79,12 +75,7 @@ fun LoginScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Мессенджер") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkGray, titleContentColor = TextWhite, navigationIconContentColor = TextWhite, actionIconContentColor = TextWhite),
-                actions = {
-                    IconButton(onClick = onNavigateToServerConfig) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настройки сервера")
-                    }
-                }
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkGray, titleContentColor = TextWhite, navigationIconContentColor = TextWhite, actionIconContentColor = TextWhite)
             )
         }
     ) { padding ->

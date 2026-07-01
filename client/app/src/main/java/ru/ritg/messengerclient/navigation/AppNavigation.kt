@@ -98,7 +98,6 @@ fun AppNavigation() {
             composable("login") {
                 LoginScreen(
                     viewModel = authViewModel,
-                    onNavigateToServerConfig = { navController.navigate("server_config") },
                     onNavigateToOtp = { navController.navigate("otp") },
                     onNavigateToContacts = { navController.navigate("main") }
                 )
