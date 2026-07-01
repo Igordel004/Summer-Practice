@@ -22,7 +22,7 @@ import ru.ritg.messengerserver.websocket.WebSocketHandshakeInterceptor;
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private static final int WS_PORT = 8081;
-    private static final int MAX_MESSAGE_SIZE = 4096;
+    private static final int MAX_MESSAGE_SIZE = 8192;
     private static final long MAX_SESSION_IDLE_TIMEOUT = 300000L;
 
     private final MessageWebSocketHandler messageWebSocketHandler;
