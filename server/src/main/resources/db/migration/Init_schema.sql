@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     payload VARCHAR(4096) NOT NULL,
-    reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL,
     status VARCHAR(16) NOT NULL CHECK (status IN ('PENDING', 'DELIVERED', 'READ')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

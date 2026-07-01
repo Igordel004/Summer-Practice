@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * DTO: входящее сообщение по WebSocket (JSON).
  *
- * <p>Входные данные: идентификаторы отправителя/получателя, текст, опциональная ссылка на reply.</p>
+ * <p>Входные данные: идентификаторы отправителя/получателя, текст.</p>
  * <p>Ожидаемый результат: доставка через {@link WsDelivery} или буферизация (PENDING).</p>
  * <p>Возможные ошибки: 1008 Policy Violation (невалидный JSON), Unauthorized.</p>
  */
@@ -19,6 +19,5 @@ public class WsMessage {
     private UUID senderId;
     private UUID recipientId;
     private String payload;
-    private UUID replyToId;
     private LocalDateTime timestamp;
 }

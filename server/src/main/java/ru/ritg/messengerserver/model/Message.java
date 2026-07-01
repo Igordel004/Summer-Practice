@@ -9,8 +9,7 @@ import java.util.UUID;
 /**
  * Сущность сообщения в чате.
  *
- * <p>Хранит отправителя, получателя, текст, опциональную ссылку на
- * родительское сообщение (reply_to_id) и статус доставки.
+ * <p>Хранит отправителя, получателя, текст и статус доставки.
  * Статус изменяется по мере прохождения сообщения через конвейер:
  * PENDING → DELIVERED → READ.</p>
  */
@@ -38,10 +37,6 @@ public class Message {
 
     @Column(name = "payload", nullable = false, length = 4096)
     private String payload;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reply_to_id")
-    private Message replyTo;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
