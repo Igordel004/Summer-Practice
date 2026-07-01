@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS contacts (
     PRIMARY KEY (user_id, contact_user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_verification_codes_phone ON verification_codes(phone);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient_id ON messages(recipient_id);
